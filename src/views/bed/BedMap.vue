@@ -1,14 +1,47 @@
 <template>
+  <!-- 定义床位SVG符号，供 <use> 引用 -->
+  <svg style="display:none;">
+    <symbol id="bedicon" viewBox="0 0 32 32">
+      <!-- 人头 -->
+      <circle cx="24" cy="10" r="4" fill="#fff"/>
+      <!-- 人体 -->
+      <rect x="22" y="14" width="4" height="8" rx="2" fill="#fff"/>
+      <!-- 床体 -->
+      <rect x="4" y="22" width="24" height="6" rx="2"/>
+      <!-- 床头 -->
+      <rect x="4" y="16" width="5" height="12" rx="1"/>
+    </symbol>
+  </svg>
   <div class="bedmap-main">
     <div class="bedmap-header">
       <span>楼层：</span>
       <el-select v-model="currentFloor" @change="loadBeds" style="width: 120px;">
         <el-option v-for="floor in floors" :key="floor" :label="floor" :value="floor" />
       </el-select>
-      <span class="stat-block total"><i class="icon-bed total"></i> 总床位: {{ totalBeds }}</span>
-      <span class="stat-block free"><i class="icon-bed free"></i> 空闲: {{ freeBeds }}</span>
-      <span class="stat-block used"><i class="icon-bed used"></i> 有人: {{ usedBeds }}</span>
-      <span class="stat-block out"><i class="icon-bed out"></i> 外出: {{ outBeds }}</span>
+      <span class="stat-block total">
+        <svg class="icon-bed stat" width="22" height="22" viewBox="0 0 32 32" :fill="getStatSvgColor('total')" xmlns="http://www.w3.org/2000/svg">
+          <use href="#bedicon"/>
+        </svg>
+        总床位: {{ totalBeds }}
+      </span>
+      <span class="stat-block free">
+        <svg class="icon-bed stat" width="22" height="22" viewBox="0 0 32 32" :fill="getStatSvgColor('free')" xmlns="http://www.w3.org/2000/svg">
+          <use href="#bedicon"/>
+        </svg>
+        空闲: {{ freeBeds }}
+      </span>
+      <span class="stat-block used">
+        <svg class="icon-bed stat" width="22" height="22" viewBox="0 0 32 32" :fill="getStatSvgColor('used')" xmlns="http://www.w3.org/2000/svg">
+          <use href="#bedicon"/>
+        </svg>
+        有人: {{ usedBeds }}
+      </span>
+      <span class="stat-block out">
+        <svg class="icon-bed stat" width="22" height="22" viewBox="0 0 32 32" :fill="getStatSvgColor('out')" xmlns="http://www.w3.org/2000/svg">
+          <use href="#bedicon"/>
+        </svg>
+        外出: {{ outBeds }}
+      </span>
     </div>
 
     <div class="bedmap-table">
@@ -21,7 +54,16 @@
                 :key="'bed-' + cell.id"
             >
               <div v-for="bed in cell.bedList" :key="bed.id" class="bed-cell-column">
-                <span :class="['icon-bed', getBedClass(bed.bedStatus)]"></span>
+                <svg
+                  class="icon-bed"
+                  width="32"
+                  height="32"
+                  viewBox="0 0 32 32"
+                  :fill="getBedSvgColor(bed.bedStatus)"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <use href="#bedicon"/>
+                </svg>
                 <div class="bed-label">{{ bed.bedNo }}</div>
               </div>
             </td>
@@ -56,16 +98,26 @@ const usedBeds = ref(0)
 const outBeds = ref(0)
 const displayList = ref([])
 
-function getBedClass(status) {
+function getBedSvgColor(status) {
   switch (status) {
-    case 1: return 'free'
-    case 2: return 'used'
-    case 3: return 'out'
-    default: return 'unknown'
+    case 1: return '#43a047' // 绿色，空闲
+    case 2: return '#ea4335' // 红色，有人
+    case 3: return '#039be5' // 蓝色，外出
+    default: return '#bdbdbd' // 灰色，未知
   }
 }
 
-// 每行最大显示 7 个格子（房间 + 功能区）
+function getStatSvgColor(type) {
+  switch (type) {
+    case 'free': return '#43a047'
+    case 'used': return '#ea4335'
+    case 'out': return '#039be5'
+    case 'total': return '#888'
+    default: return '#bdbdbd'
+  }
+}
+
+// 每行最大显示 10 个格子（房间 + 功能区）
 function getTableRows(list) {
   const rows = []
   let currentRow = []
@@ -87,7 +139,6 @@ function getTableRows(list) {
   return rows
 }
 
-
 function buildDisplayList(list) {
   const res = []
 
@@ -103,7 +154,7 @@ function buildDisplayList(list) {
 
   res.push(...before.map(r => ({ ...r, type: 'room' })))
 
-  // 如果是“一楼”，插入功能区，否则不插入
+  // 如果是"一楼"，插入功能区，否则不插入
   if (currentFloor.value === '一楼') {
     res.push(...functionAreas)
   }
@@ -113,7 +164,6 @@ function buildDisplayList(list) {
 
   return res
 }
-
 
 function loadBeds() {
   findShowBedVo(currentFloor.value).then(res => {
@@ -154,22 +204,17 @@ onMounted(() => {
   align-items: center;
 }
 .icon-bed {
-  display: inline-block;
+  width: 32px;
+  height: 32px;
+  display: block;
+  margin: 0 auto 4px auto;
+}
+.icon-bed.stat {
   width: 22px;
   height: 22px;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  margin-bottom: 4px;
-}
-.icon-bed.free {
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%23ea4335" viewBox="0 0 24 24"><path d="M21 10.78V8c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v2.78C2.39 11.11 2 11.78 2 12.5V18h2v-2h16v2h2v-5.5c0-.72-.39-1.39-1-1.72zM4 8c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v2H4V8zm16 7H4v-2.5c0-.28.22-.5.5-.5h15c.28 0 .5.22.5.5V15z"/></svg>');
-}
-.icon-bed.used {
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%23000000" viewBox="0 0 24 24"><path d="M21 10.78V8c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v2.78C2.39 11.11 2 11.78 2 12.5V18h2v-2h16v2h2v-5.5c0-.72-.39-1.39-1-1.72zM4 8c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v2H4V8zm16 7H4v-2.5c0-.28.22-.5.5-.5h15c.28 0 .5.22.5.5V15z"/></svg>');
-}
-.icon-bed.out {
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="%23039be5" viewBox="0 0 24 24"><path d="M21 10.78V8c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v2.78C2.39 11.11 2 11.78 2 12.5V18h2v-2h16v2h2v-5.5c0-.72-.39-1.39-1-1.72zM4 8c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v2H4V8zm16 7H4v-2.5c0-.28.22-.5.5-.5h15c.28 0 .5.22.5.5V15z"/></svg>');
+  margin: 0 6px 0 0;
+  display: inline-block;
+  vertical-align: middle;
 }
 .bedmap-table {
   overflow-x: auto;
